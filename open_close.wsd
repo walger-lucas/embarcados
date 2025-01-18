@@ -1,0 +1,55 @@
+@startuml
+state starting_error
+state initial_test{
+    [*] -> close_gate: !sensor_closed
+    close_gate -> starting_error : TIMEOUT
+    close_gate: entry / close()
+    
+}
+starting_error : entry / sayerr()
+
+initial_test --> closed : sensor_closed
+closed -> blocked_closed : [blocked]
+closed <- blocked_closed : [!blocked]
+state closed {
+ [*] -> idle
+ idle -> validate: tag_received
+ validate -> [*] : tag_valid / open()
+}
+state opening {
+    opening : entry / open()
+    opening: exit / stop()
+}
+closed --> opening
+blocked_closed --> opening : admin_task
+
+opening --> blocked_open : opened [blocked]
+opening --> open : opened [!blocked]
+open -> blocked_open : [blocked]
+
+state closing {
+    closing : entry / close()
+    closing : exit / stop()
+    [*] -> reopen : obstruction / open()
+    reopen -d-> close_again : opened
+    close_again: entry / stop(); wait(5s)
+    close_again : exit / close()
+    close_again ->reopen :obstruction / open()
+}
+open -u-> closing
+open : entry / wait(50s)
+blocked_open -l-> closing: admin_task
+
+closing -u-> blocked_closed : closed [blocked]
+closing -u-> closed : closed [!blocked]
+
+
+
+
+
+[*] --> initial_test
+
+
+
+
+@enduml
